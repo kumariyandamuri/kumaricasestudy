@@ -11,7 +11,15 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500", "null") // Added Live Server and null (file://)
+                .allowedOrigins(
+                    "http://localhost",         // Docker frontend (port 80)
+                    "http://localhost:80",       // Docker frontend (explicit port)
+                    "http://127.0.0.1",         // Docker frontend (IP)
+                    "http://localhost:5173",    // Vite dev server
+                    "http://localhost:5500",    // VS Code Live Server
+                    "http://127.0.0.1:5500",   // VS Code Live Server (IP)
+                    "null"                       // file:// origin
+                )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);

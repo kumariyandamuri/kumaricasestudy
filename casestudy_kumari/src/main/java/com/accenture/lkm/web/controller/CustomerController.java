@@ -30,8 +30,7 @@ public class CustomerController {
 
             @PathVariable String customerType) {
 
-        List<CustomerBean> customerList = 
-            customerService.getCustomerDetailsByType(customerType);
+        List<CustomerBean> customerList = customerService.getCustomerDetailsByType(customerType);
 
         if (customerList == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -45,16 +44,15 @@ public class CustomerController {
 
             @RequestBody CustomerBean customerBean) {
 
-        CustomerBean updatedBean = 
-            customerService.updateCustomerType(customerBean);
+        CustomerBean updatedBean = customerService.updateCustomerType(customerBean);
 
         if (updatedBean == null) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        String message = updatedBean.getCustomerEmail() + 
-            ", customer type is updated as " + 
-            updatedBean.getCustomerType() + " successfully.";
+        String message = updatedBean.getCustomerEmail() +
+                ", customer type is updated as " +
+                updatedBean.getCustomerType() + " successfully.";
 
         return new ResponseEntity<>(message, HttpStatus.OK);
     }

@@ -1,6 +1,11 @@
 const { useState, useEffect } = React;
 
-const API_BASE = '/api';
+// Auto-detect: Dev (Live Server port 5500/5173) → call backend directly
+//              Docker (port 80, nginx)           → use /api proxy
+const DEV_PORTS = ['5500', '5173', '3000'];
+const API_BASE = DEV_PORTS.includes(window.location.port)
+    ? 'http://localhost:8080'   // Local Spring Boot (dev)
+    : '/api';                    // nginx proxy (Docker)
 
 // API Service
 const api = {
@@ -50,8 +55,13 @@ const CustomerManagement = () => {
             const res = await api.getCustomersByType(type);
             setCustomers(res.data || []);
         } catch (err) {
-            setError(err.response?.status === 404 ? 'No customers found for this type.' : 'Failed to fetch customers.');
-            setCustomers([]);
+            if (err.response?.status === 404) {
+                // No customers for this type — treat as empty, not an error
+                setCustomers([]);
+            } else {
+                setError('Failed to fetch customers. Is the backend running on port 8080?');
+                setCustomers([]);
+            }
         } finally {
             setLoading(false);
         }
@@ -81,7 +91,7 @@ const CustomerManagement = () => {
             <h2><i className="fas fa-users"></i> Customer Management</h2>
             {error && <div className="error-message">{error}</div>}
             {success && <div className="success-message">{success}</div>}
-            
+
             <div className="form-group">
                 <label>Filter by Customer Type</label>
                 <select value={type} onChange={(e) => setType(e.target.value)}>
@@ -117,7 +127,7 @@ const CustomerManagement = () => {
                             </tr>
                         ))}
                         {customers.length === 0 && (
-                            <tr><td colSpan="5">No customers available.</td></tr>
+                            <tr><td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '1.5rem' }}>No customers found for type: <strong>{type}</strong></td></tr>
                         )}
                     </tbody>
                 </table>
@@ -129,13 +139,13 @@ const CustomerManagement = () => {
 const OrderManagement = () => {
     const [orders, setOrders] = useState([]);
     const [searchType, setSearchType] = useState('customerId');
-    
+
     // Form States
     const [customerId, setCustomerId] = useState('');
     const [custType, setCustType] = useState('Platinum');
     const [minBill, setMinBill] = useState('');
     const [maxBill, setMaxBill] = useState('');
-    
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -146,16 +156,21 @@ const OrderManagement = () => {
         try {
             let res;
             if (searchType === 'customerId') {
-                if (!customerId) return setError('Customer ID is required');
+                if (!customerId) { setLoading(false); return setError('Customer ID is required'); }
                 res = await api.getOrdersByCustomerId(customerId);
             } else {
-                if (!minBill || !maxBill) return setError('Min and Max bill amounts are required');
+                if (!minBill || !maxBill) { setLoading(false); return setError('Min and Max bill amounts are required'); }
                 res = await api.getOrdersByFilter(custType, minBill, maxBill);
             }
             setOrders(res.data || []);
         } catch (err) {
-            setError(err.response?.status === 404 ? 'No orders found.' : 'Failed to fetch orders.');
-            setOrders([]);
+            if (err.response?.status === 404) {
+                // No orders found — treat as empty, not an error
+                setOrders([]);
+            } else {
+                setError('Failed to fetch orders. Is the backend running on port 8080?');
+                setOrders([]);
+            }
         } finally {
             setLoading(false);
         }
@@ -165,7 +180,7 @@ const OrderManagement = () => {
         <div className="glass-panel">
             <h2><i className="fas fa-shopping-cart"></i> Order Management</h2>
             {error && <div className="error-message">{error}</div>}
-            
+
             <div className="form-group">
                 <label>Search By</label>
                 <select value={searchType} onChange={(e) => setSearchType(e.target.value)}>
@@ -229,7 +244,7 @@ const OrderManagement = () => {
                             </tr>
                         ))}
                         {orders.length === 0 && (
-                            <tr><td colSpan="6">No orders to display.</td></tr>
+                            <tr><td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8', padding: '1.5rem' }}>No orders found. Use the form above to search.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -248,15 +263,20 @@ const ProductManagement = () => {
         e.preventDefault();
         setError(null);
         setMessage(null);
-        if (!productId || !stock) return setError('Please fill all fields');
-        
+        if (!productId || !stock) return setError('Please fill all fields.');
+        if (parseInt(stock) < 0) return setError('Stock value cannot be negative.');
+
         try {
             const res = await api.updateProductStock({ productId: parseInt(productId), stock: parseInt(stock) });
             setMessage(res.data || 'Stock updated successfully');
             setProductId('');
             setStock('');
         } catch (err) {
-            setError('Failed to update product stock.');
+            if (err.response?.status === 404) {
+                setError(`Product ID ${productId} not found. Please check the ID.`);
+            } else {
+                setError('Failed to update product stock. Is the backend running on port 8080?');
+            }
         }
     };
 
@@ -265,7 +285,7 @@ const ProductManagement = () => {
             <h2><i className="fas fa-box"></i> Product Management</h2>
             {error && <div className="error-message">{error}</div>}
             {message && <div className="success-message">{message}</div>}
-            
+
             <form onSubmit={updateStock}>
                 <div className="grid">
                     <div className="form-group">
